@@ -21,7 +21,11 @@ public class AuthServiceImpl implements AuthService{
     public LoginResponse login(LoginRequest loginRequest){
         UserEntity userEntity = new UserEntity();
         userEntity.setUsername(loginRequest.getUsername());
-        UserEntity result = authDao.save(userEntity);
+
+        UserEntity result = authDao.getUserEntitiesByUsername(loginRequest.getUsername());
+        if (result == null) {
+           result = authDao.save(userEntity);
+        }
 
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setUsername(result.getUsername());

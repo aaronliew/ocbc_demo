@@ -17,6 +17,9 @@ public class UserEntity {
     @Column(name = "username")
     String username;
 
+    @Column(name = "balance")
+    Long balance;
+
     @Column(name = "record_create_date")
     @CreationTimestamp
     Date recordCreateDate;
@@ -39,6 +42,14 @@ public class UserEntity {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public Long getBalance() {
+        return balance;
+    }
+
+    public void setBalance(Long balance) {
+        this.balance = balance;
     }
 
     public Date getRecordCreateDate() {

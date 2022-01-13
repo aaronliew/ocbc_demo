@@ -7,6 +7,8 @@ import com.example.demo.model.database.UserEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
+
 @Service
 public class AuthServiceImpl implements AuthService{
 
@@ -19,10 +21,12 @@ public class AuthServiceImpl implements AuthService{
 
     @Override
     public LoginResponse login(LoginRequest loginRequest){
+        String username = loginRequest.getUsername().toLowerCase();
         UserEntity userEntity = new UserEntity();
-        userEntity.setUsername(loginRequest.getUsername());
+        userEntity.setUsername(username);
+        userEntity.setBalance(0L);
 
-        UserEntity result = authDao.getUserEntitiesByUsername(loginRequest.getUsername());
+        UserEntity result = authDao.getUserEntitiesByUsername(username);
         if (result == null) {
            result = authDao.save(userEntity);
         }

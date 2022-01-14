@@ -1,6 +1,8 @@
 package com.example.demo.command;
 
 import com.example.demo.command.subcommand.LoginCommand;
+import com.example.demo.command.subcommand.PaymentCommand;
+import com.example.demo.command.subcommand.TopUpCommand;
 import kong.unirest.Unirest;
 import org.springframework.beans.factory.annotation.Value;
 import picocli.CommandLine;
@@ -11,7 +13,7 @@ import java.util.logging.Logger;
 
 import static picocli.CommandLine.Command;
 @Command(name = "bank",
-        subcommands = { LoginCommand.class, })
+        subcommands = { LoginCommand.class, PaymentCommand.class, TopUpCommand.class})
 public class BankCommand implements Runnable{
     @CommandLine.Spec
     CommandLine.Model.CommandSpec spec;

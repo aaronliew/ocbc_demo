@@ -11,5 +11,6 @@ import lombok.Data;
 public class LoginResponse {
     private Long id;
     private String username;
+    private Long balance;
     private Debt debt;
 }

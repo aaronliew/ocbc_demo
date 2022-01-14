@@ -33,6 +33,7 @@ public class AuthServiceImpl implements AuthService{
 
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setId(result.getId());
+        loginResponse.setBalance(result.getBalance());
         loginResponse.setUsername(result.getUsername());
 
         return loginResponse;

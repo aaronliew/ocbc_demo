@@ -57,14 +57,7 @@ public class LoginCommand implements Runnable {
     private static void writeConfigFile(LoginResponse loginResponse) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         String jsonStr = objectMapper.writeValueAsString(loginResponse);
-        Files.write(Paths.get("./fileName.txt"), jsonStr.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private static void readConfigFile() throws Exception{
-        String lines = Files.readAllLines(Paths.get("./fileName.txt")).get(0);
-        ObjectMapper objectMapper = new ObjectMapper();
-        Username usernameObj = objectMapper.readValue(lines, Username.class);
-        System.out.println(usernameObj.getUsername());
+        Files.write(Paths.get("./credential.txt"), jsonStr.getBytes(StandardCharsets.UTF_8));
     }
 
     public static void main(String[] args) {

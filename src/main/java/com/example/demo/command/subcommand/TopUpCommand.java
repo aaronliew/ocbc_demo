@@ -55,7 +55,7 @@ public class TopUpCommand implements Runnable {
     }
 
     private LoginResponse readConfigFile() throws Exception{
-        String lines = Files.readAllLines(Paths.get("./fileName.txt")).get(0);
+        String lines = Files.readAllLines(Paths.get("./credential.txt")).get(0);
         ObjectMapper objectMapper = new ObjectMapper();
         return objectMapper.readValue(lines, LoginResponse.class);
     }

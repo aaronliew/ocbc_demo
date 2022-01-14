@@ -34,13 +34,20 @@ public class TransactionController {
             return transactionService.makePayment(paymentRequest);
         } catch (InvalidRecipientException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid recipient");
+        } catch (InvalidArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid argument");
         }
     }
 
     @PostMapping("/topup")
     public TopUpResponse topUp(@RequestBody TopUpRequest topUpRequest){
-        validateTopUpRequest(topUpRequest);
-        return transactionService.topUpPayment(topUpRequest);
+        try {
+            validateTopUpRequest(topUpRequest);
+            return transactionService.topUpPayment(topUpRequest);
+        } catch (InvalidArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid argument");
+        }
+
     }
 
     public void validateMakePaymentRequest(PaymentRequest paymentRequest) throws InvalidArgumentException {

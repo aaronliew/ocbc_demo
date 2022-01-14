@@ -22,17 +22,6 @@ public class TransactionServiceImpl implements TransactionService{
 
     TransactionDao transactionDao;
     DebtDao debtDao;
-//
-//    -- transaction_table// must be always 0
-//-- alice topup 100
-//            -- alice transaction amount 100, balance = 100
-//            -- pay bob amount 210
-//            -- alice transaction -100, balance = 0
-//
-//            --debt
-//-- transaction_id=a, amount= -110
-//
-//            -- bob get all, list of debts, total balance in user
 
     @Autowired
     public TransactionServiceImpl(AuthDao authDao, TransactionDao transactionDao, DebtDao debtDao){
@@ -49,20 +38,33 @@ public class TransactionServiceImpl implements TransactionService{
         updateTransactionInDb(senderEntity.getId(), recipientEntity.getId(), -paymentRequest.getAmount());
 
         Long balance = senderEntity.getBalance();
-        Long balanceAfterDebt = settleOwedFromRecipientDebt(senderEntity, recipientEntity, paymentRequest);
-        PaymentResponse senderPaymentResponse = handleSender(senderEntity, balanceAfterDebt, paymentRequest);
+        Long paymentAfterDebt = settleOwedFromRecipientDebt(senderEntity, recipientEntity, paymentRequest);
+        PaymentResponse senderPaymentResponse = handleSenderPayment(senderEntity, paymentAfterDebt, paymentRequest);
+        handleRecipientPayment(balance, recipientEntity, paymentAfterDebt);
 
-        handleRecipient(balance, recipientEntity, balanceAfterDebt);
+        senderPaymentResponse.setTransaction(getTransactionAmount(balance, paymentAfterDebt, paymentRequest.getAmount()));
         return senderPaymentResponse;
+    }
+
+    private long getTransactionAmount(long userBalance, long paymentAfterDebt, long totalPayment){
+        if (paymentAfterDebt > 0) {
+            long balance = userBalance - paymentAfterDebt;
+            return balance >= 0 ? totalPayment : userBalance + totalPayment - paymentAfterDebt;
+        } else {
+            return totalPayment;
+        }
     }
 
     public TopUpResponse topUpPayment(TopUpRequest topUpRequest) throws InvalidArgumentException{
         //check if recipient is empty else throw exception
         UserEntity userEntity = getUserEntityByUsername(topUpRequest.getUsername());
         updateTransactionInDb(userEntity.getId(), userEntity.getId(), topUpRequest.getAmount());
+
         Long balance = userEntity.getBalance() + topUpRequest.getAmount();
-        UserEntity resultUserEntity =updateUserBalance(userEntity, balance);
+        updateUserBalance(userEntity, balance);
+
         Payment payment = payDebt(userEntity.getId());
+        UserEntity resultUserEntity = authDao.getUserEntityById(userEntity.getId());
 
         Debt debt = getDebtSummary(userEntity.getId());
 
@@ -109,7 +111,7 @@ public class TransactionServiceImpl implements TransactionService{
         return payment;
     }
 
-    private PaymentResponse handleSender(UserEntity senderEntity, long balanceAfterDebt, PaymentRequest paymentRequest) {
+    private PaymentResponse handleSenderPayment(UserEntity senderEntity, long balanceAfterDebt, PaymentRequest paymentRequest) {
         if (balanceAfterDebt > 0) {
             Long balance = senderEntity.getBalance() - balanceAfterDebt;
             updateUserBalance(senderEntity, balance);
@@ -138,7 +140,7 @@ public class TransactionServiceImpl implements TransactionService{
         return balanceAfterDebt;
     }
 
-    private void handleRecipient(Long balance, UserEntity recipientEntity, Long paymentAmount){
+    private void handleRecipientPayment(Long balance, UserEntity recipientEntity, Long paymentAmount){
         Long balanceAfterPayment =  balance - paymentAmount;
         Long actualPaymentAmount = 0L;
         if (balanceAfterPayment > 0){
@@ -149,7 +151,6 @@ public class TransactionServiceImpl implements TransactionService{
 
         Long recipientBalance =  recipientEntity.getBalance() + actualPaymentAmount;
         updateUserBalance(recipientEntity, recipientBalance);
-//        payDebt(recipientEntity.getId());
     }
 
 
@@ -202,6 +203,12 @@ public class TransactionServiceImpl implements TransactionService{
 
         userEntity = authDao.getUserEntityById(senderUserId);
         updateUserBalance(userEntity, balance);
+
+        if (debtEntity != null) {
+            //update recipient balance
+            UserEntity recipientEntity = authDao.getUserEntityById(debtEntity.getRecipientUserId());
+            updateUserBalance(recipientEntity, recipientEntity.getBalance() + paymentAmount);
+        }
 
         if (paymentAmount > 0) {
             updateTransactionInDb(debtEntity.getSenderUserId(),

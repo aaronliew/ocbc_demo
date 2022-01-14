@@ -1,5 +1,6 @@
 package com.example.demo.command.subcommand;
 
+import com.example.demo.exception.ApiException;
 import com.example.demo.model.auth.LoginResponse;
 import com.example.demo.model.command.Username;
 import com.example.demo.model.transaction.TopUpRequest;
@@ -32,6 +33,10 @@ public class TopUpCommand implements Runnable {
         LoginResponse loginResponse;
         try{
             loginResponse = readConfigFile();
+        } catch (Exception e){
+            throw new CommandLine.ExecutionException(spec.commandLine(), "Please login before you make payment");
+        }
+        try{
             TopUpRequest topUpRequest = new TopUpRequest();
             topUpRequest.setUsername(loginResponse.getUsername());
             topUpRequest.setAmount(amount);
@@ -43,8 +48,8 @@ public class TopUpCommand implements Runnable {
             }
             System.out.println("Your balance is " + topUpResponse.getBalance());
             CommandUtil.printDebt(topUpResponse.getDebt());
-        } catch (Exception e){
-            throw new CommandLine.ExecutionException(spec.commandLine(), "Please login before you make payment");
+        } catch (ApiException e) {
+            System.out.println(e.getErrorResponse().getMessage());
         }
 
     }

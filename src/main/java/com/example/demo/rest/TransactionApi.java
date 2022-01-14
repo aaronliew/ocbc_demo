@@ -28,7 +28,7 @@ public class TransactionApi {
     }
 
     public static TopUpResponse topUp(String baseUrl, TopUpRequest topUpRequest) throws ApiException{
-        HttpResponse<TopUpResponse> response = Unirest.post(baseUrl+"transaction/topUp")
+        HttpResponse<TopUpResponse> response = Unirest.post(baseUrl+"transaction/topup")
                 .header("Content-Type", "application/json")
                 .body(topUpRequest)
                 .asObject(TopUpResponse.class);

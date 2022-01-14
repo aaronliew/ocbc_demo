@@ -49,7 +49,8 @@ public class PaymentCommand implements Runnable {
             paymentRequest.setRecipientUserName(recipientName);
             paymentRequest.setAmount(amount);
             PaymentResponse paymentResponse = TransactionApi.pay(BASE_URL, paymentRequest);
-            System.out.println("Transferred " + amount + " to " + recipientName);
+            System.out.println("Transferred " + paymentResponse.getTransaction() + " to " + recipientName);
+            System.out.println("Your balance is " + paymentResponse.getBalance());
             CommandUtil.printDebt(paymentResponse.getDebt());
         } catch (ApiException e) {
             System.out.println(e.getErrorResponse().getMessage());

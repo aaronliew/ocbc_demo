@@ -7,8 +7,8 @@ import lombok.Data;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class PaymentResponse {
-    private long transaction;
+public class TopUpResponse {
+    private Payment payment;
     private long balance;
     private Debt debt;
     private String asOnDate;

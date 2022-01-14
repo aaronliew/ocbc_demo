@@ -1,13 +1,20 @@
 package com.example.demo.controller;
 
+import com.example.demo.exception.InvalidArgumentException;
+import com.example.demo.exception.InvalidRecipientException;
 import com.example.demo.model.transaction.PaymentRequest;
 import com.example.demo.model.transaction.PaymentResponse;
+import com.example.demo.model.transaction.TopUpRequest;
+import com.example.demo.model.transaction.TopUpResponse;
 import com.example.demo.service.TransactionService;
+import com.example.demo.util.ValidationUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("transaction")
@@ -22,8 +29,46 @@ public class TransactionController {
 
     @PostMapping("/pay")
     public PaymentResponse makePayment(@RequestBody PaymentRequest paymentRequest){
-        return transactionService.makePayment(paymentRequest);
+        try {
+            validateMakePaymentRequest(paymentRequest);
+            return transactionService.makePayment(paymentRequest);
+        } catch (InvalidRecipientException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid recipient");
+        }
     }
 
+    @PostMapping("/topup")
+    public TopUpResponse topUp(@RequestBody TopUpRequest topUpRequest){
+        validateTopUpRequest(topUpRequest);
+        return transactionService.topUpPayment(topUpRequest);
+    }
+
+    public void validateMakePaymentRequest(PaymentRequest paymentRequest) throws InvalidArgumentException {
+        if (ValidationUtil.isStringEmpty(paymentRequest.getSenderUserName())) {
+            throw new InvalidArgumentException();
+        }
+
+        if (ValidationUtil.isStringEmpty(paymentRequest.getRecipientUserName())) {
+            throw new InvalidArgumentException();
+        }
+
+        if (paymentRequest.getSenderUserName().equals(paymentRequest.getRecipientUserName())){
+            throw new InvalidRecipientException();
+        }
+
+        if (ValidationUtil.isLongValueEmpty(paymentRequest.getAmount())) {
+            throw new InvalidArgumentException();
+        }
+    }
+
+    public void validateTopUpRequest(TopUpRequest topUpRequest) throws InvalidArgumentException {
+        if (ValidationUtil.isStringEmpty(topUpRequest.getUsername())) {
+            throw new InvalidArgumentException();
+        }
+
+        if (ValidationUtil.isLongValueEmpty(topUpRequest.getAmount())) {
+            throw new InvalidArgumentException();
+        }
+    }
 
 }

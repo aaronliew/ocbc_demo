@@ -1,7 +1,7 @@
 package com.example.demo;
 
 import com.example.demo.model.auth.LoginRequest;
-import com.example.demo.util.Json;
+import com.example.demo.util.JsonUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,7 +37,7 @@ class AuthControllerTest {
         LoginRequest loginRequest = createLoginRequest(alice);
         mvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(Json.toString(loginRequest)))
+                        .content(JsonUtil.toString(loginRequest)))
                 .andExpect(status().is2xxSuccessful())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.username")
                         .value(alice.toLowerCase()));
@@ -45,7 +45,7 @@ class AuthControllerTest {
         loginRequest = createLoginRequest(bob);
         mvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(Json.toString(loginRequest)))
+                        .content(JsonUtil.toString(loginRequest)))
                 .andExpect(status().is2xxSuccessful())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.username")
                         .value(bob.toLowerCase()));
@@ -59,13 +59,13 @@ class AuthControllerTest {
         LoginRequest loginRequest = createLoginRequest(alice);
         mvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(Json.toString(loginRequest)))
+                        .content(JsonUtil.toString(loginRequest)))
                 .andExpect(status().isBadRequest());
 
         loginRequest = createLoginRequest(bob);
         mvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(Json.toString(loginRequest)))
+                        .content(JsonUtil.toString(loginRequest)))
                 .andExpect(status().isBadRequest());
     }
 

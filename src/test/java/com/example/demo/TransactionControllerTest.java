@@ -3,7 +3,7 @@ package com.example.demo;
 import com.example.demo.model.auth.LoginRequest;
 import com.example.demo.model.transaction.PaymentRequest;
 import com.example.demo.model.transaction.TopUpRequest;
-import com.example.demo.util.Json;
+import com.example.demo.util.JsonUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,7 +39,7 @@ class TransactionControllerTest {
         LoginRequest loginRequest = createLoginRequest(alice);
         mvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(Json.toString(loginRequest)))
+                        .content(JsonUtil.toString(loginRequest)))
                 .andExpect(status().is2xxSuccessful())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.username")
                         .value(alice.toLowerCase()));
@@ -47,7 +47,7 @@ class TransactionControllerTest {
         loginRequest = createLoginRequest(bob);
         mvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(Json.toString(loginRequest)))
+                        .content(JsonUtil.toString(loginRequest)))
                 .andExpect(status().is2xxSuccessful())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.username")
                         .value(bob.toLowerCase()));
@@ -56,7 +56,7 @@ class TransactionControllerTest {
         TopUpRequest topUpRequest = createTopUpRequest(alice, 100);
         mvc.perform(post("/transaction/topup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(Json.toString(topUpRequest)))
+                        .content(JsonUtil.toString(topUpRequest)))
                 .andExpect(status().is2xxSuccessful())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.balance")
                         .value(100));
@@ -70,7 +70,7 @@ class TransactionControllerTest {
         LoginRequest loginRequest = createLoginRequest(tester1);
         mvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(Json.toString(loginRequest)))
+                        .content(JsonUtil.toString(loginRequest)))
                 .andExpect(status().is2xxSuccessful())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.username")
                         .value(tester1.toLowerCase()));
@@ -78,7 +78,7 @@ class TransactionControllerTest {
         loginRequest = createLoginRequest(tester2);
         mvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(Json.toString(loginRequest)))
+                        .content(JsonUtil.toString(loginRequest)))
                 .andExpect(status().is2xxSuccessful())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.username")
                         .value(tester2.toLowerCase()));
@@ -87,7 +87,7 @@ class TransactionControllerTest {
         TopUpRequest topUpRequest = createTopUpRequest(tester1, 100);
         mvc.perform(post("/transaction/topup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(Json.toString(topUpRequest)))
+                        .content(JsonUtil.toString(topUpRequest)))
                 .andExpect(status().is2xxSuccessful())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.balance")
                         .value(100));
@@ -96,7 +96,7 @@ class TransactionControllerTest {
         PaymentRequest paymentRequest = createPaymentRequest(tester1, tester2, 60);
         mvc.perform(post("/transaction/pay")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(Json.toString(paymentRequest)))
+                        .content(JsonUtil.toString(paymentRequest)))
                 .andExpect(status().is2xxSuccessful())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.balance")
                         .value(40))

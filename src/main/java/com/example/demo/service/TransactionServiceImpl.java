@@ -4,19 +4,16 @@ import com.example.demo.database.AuthDao;
 import com.example.demo.database.DebtDao;
 import com.example.demo.database.TransactionDao;
 import com.example.demo.exception.InvalidArgumentException;
-import com.example.demo.model.auth.LoginResponse;
-import com.example.demo.model.command.Username;
+import com.example.demo.exception.InvalidRecipientException;
 import com.example.demo.model.database.DebtEntity;
 import com.example.demo.model.database.TransactionEntity;
 import com.example.demo.model.database.UserEntity;
-import com.example.demo.model.transaction.PaymentRequest;
-import com.example.demo.model.transaction.PaymentResponse;
+import com.example.demo.model.transaction.*;
 import com.example.demo.util.DateUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Calendar;
-import java.util.List;
 
 @Service
 public class TransactionServiceImpl implements TransactionService{
@@ -45,105 +42,205 @@ public class TransactionServiceImpl implements TransactionService{
     }
 
     @Override
-    public PaymentResponse makePayment(PaymentRequest paymentRequest) throws InvalidArgumentException{
+    public PaymentResponse makePayment(PaymentRequest paymentRequest) throws InvalidArgumentException, InvalidRecipientException{
         //check if recipient is empty else throw exception
-        UserEntity senderEntity = getUserEntityById(paymentRequest.getSenderUserId());
-        UserEntity recipientEntity = getUserEntityById(paymentRequest.getRecipientUserId());
-        updateTransactionInDb(paymentRequest);
+        UserEntity senderEntity = getUserEntityByUsername(paymentRequest.getSenderUserName());
+        UserEntity recipientEntity = getUserEntityByUsername(paymentRequest.getRecipientUserName());
+        updateTransactionInDb(senderEntity.getId(), recipientEntity.getId(), -paymentRequest.getAmount());
 
-        PaymentResponse senderPaymentResponse = handleSender(senderEntity, paymentRequest);
-        handleRecipient(recipientEntity, paymentRequest);
+        Long balance = senderEntity.getBalance();
+        Long balanceAfterDebt = settleOwedFromRecipientDebt(senderEntity, recipientEntity, paymentRequest);
+        PaymentResponse senderPaymentResponse = handleSender(senderEntity, balanceAfterDebt, paymentRequest);
+
+        handleRecipient(balance, recipientEntity, balanceAfterDebt);
         return senderPaymentResponse;
     }
 
-    private PaymentResponse handleSender(UserEntity senderEntity, PaymentRequest paymentRequest) {
-        Long balance =  senderEntity.getBalance() - paymentRequest.getAmount();
-        UserEntity userEntity = updateUserBalance(senderEntity, balance);
-        DebtEntity debtResult = updateDebt(senderEntity.getId(), paymentRequest.getRecipientUserId(), balance);
+    public TopUpResponse topUpPayment(TopUpRequest topUpRequest) throws InvalidArgumentException{
+        //check if recipient is empty else throw exception
+        UserEntity userEntity = getUserEntityByUsername(topUpRequest.getUsername());
+        updateTransactionInDb(userEntity.getId(), userEntity.getId(), topUpRequest.getAmount());
+        Long balance = userEntity.getBalance() + topUpRequest.getAmount();
+        UserEntity resultUserEntity =updateUserBalance(userEntity, balance);
+        Payment payment = payDebt(userEntity.getId());
 
+        Debt debt = getDebtSummary(userEntity.getId());
+
+        TopUpResponse topUpResponse = new TopUpResponse();
+        topUpResponse.setPayment(payment);
+        topUpResponse.setBalance(resultUserEntity.getBalance());
+        topUpResponse.setDebt(debt);
+        return topUpResponse;
+    }
+
+    @Override
+    public Debt getDebtSummary(Long userId){
+        DebtEntity oweToDebtEntity = debtDao.getDebtEntityBySenderUserId(userId);
+        DebtEntity oweFromDebtEntity = debtDao.getDebtEntityByRecipientUserId(userId);
+        Debt debt = null;
+        if (oweToDebtEntity != null){
+            debt  = constructDebt(oweToDebtEntity.getSenderUserId(),
+                    oweToDebtEntity.getRecipientUserId(),
+                    oweToDebtEntity.getAmount());
+        } else if (oweFromDebtEntity != null){
+            debt  = constructDebt(oweFromDebtEntity.getRecipientUserId(),
+                    oweFromDebtEntity.getSenderUserId(),
+                    -oweFromDebtEntity.getAmount());
+        }
+
+        return debt;
+    }
+
+    private Debt constructDebt(Long senderUserId, Long recipientUserId, Long amount){
+        Debt debt = new Debt();
+        debt.setSenderName(authDao.getUserEntityById(senderUserId).getUsername());
+        UserEntity recipientEntity = getUserEntityByUsername(authDao.getUserEntityById(recipientUserId).getUsername());
+        debt.setRecipientName(recipientEntity.getUsername());
+        debt.setAmount(amount);
+        return debt;
+    }
+
+    private Payment constructPayment(Long senderUserId, Long recipientUserId, Long amount){
+        Payment payment = new Payment();
+        payment.setSenderName(authDao.getUserEntityById(senderUserId).getUsername());
+        UserEntity recipientEntity = getUserEntityByUsername(authDao.getUserEntityById(recipientUserId).getUsername());
+        payment.setRecipientName(recipientEntity.getUsername());
+        payment.setAmount(amount);
+        return payment;
+    }
+
+    private PaymentResponse handleSender(UserEntity senderEntity, long balanceAfterDebt, PaymentRequest paymentRequest) {
+        if (balanceAfterDebt > 0) {
+            Long balance = senderEntity.getBalance() - balanceAfterDebt;
+            updateUserBalance(senderEntity, balance);
+            UserEntity recipientEntity = getUserEntityByUsername(paymentRequest.getRecipientUserName());
+            updateSenderDebt(senderEntity.getId(), recipientEntity.getId(), balance);
+        }
+
+        UserEntity userEntity = authDao.getUserEntitiesByUsername(senderEntity.getUsername());
+        Debt debt = getDebtSummary(senderEntity.getId());
         return constructPaymentResponse(paymentRequest.getAmount(),
-                userEntity.getBalance(),
-                debtResult.getAmount() == null ? 0 : debtResult.getAmount());
+                userEntity.getBalance(), debt);
     }
 
-    private void handleRecipient(UserEntity recipientEntity, PaymentRequest paymentRequest){
-        Long balance =  recipientEntity.getBalance() + paymentRequest.getAmount();
-        updateUserBalance(recipientEntity, balance);
-
-        Long senderId = recipientEntity.getId();
-        Long recipientId = paymentRequest.getSenderUserId();
-        payDebt(senderId, recipientId, balance);
+    private Long settleOwedFromRecipientDebt(UserEntity senderEntity, UserEntity recipientEntity, PaymentRequest paymentRequest){
+        DebtEntity debtEntity = debtDao.getDebtEntityBySenderUserIdAndRecipientUserId(recipientEntity.getId(), senderEntity.getId());
+        Long balanceAfterDebt = paymentRequest.getAmount();
+        if (debtEntity != null){
+            balanceAfterDebt = paymentRequest.getAmount() - debtEntity.getAmount();
+            if (balanceAfterDebt > 0) {
+                debtEntity.setAmount(0L);
+            } else {
+                debtEntity.setAmount(Math.abs(balanceAfterDebt));
+            }
+            debtDao.save(debtEntity);
+        }
+        return balanceAfterDebt;
     }
+
+    private void handleRecipient(Long balance, UserEntity recipientEntity, Long paymentAmount){
+        Long balanceAfterPayment =  balance - paymentAmount;
+        Long actualPaymentAmount = 0L;
+        if (balanceAfterPayment > 0){
+            actualPaymentAmount  = paymentAmount;
+        } else {
+            actualPaymentAmount = balance;
+        }
+
+        Long recipientBalance =  recipientEntity.getBalance() + actualPaymentAmount;
+        updateUserBalance(recipientEntity, recipientBalance);
+//        payDebt(recipientEntity.getId());
+    }
+
 
     private UserEntity updateUserBalance(UserEntity userEntity, Long balance){
+        userEntity.setBalance(balance);
         if (balance < 0) {
             userEntity.setBalance(0L);
         }
-        userEntity.setBalance(balance);
         return authDao.save(userEntity);
     }
 
-    private DebtEntity updateDebt(Long senderUserId, Long recipientUserId, Long balance){
+    private DebtEntity updateSenderDebt(Long senderUserId, Long recipientUserId, Long balance){
+        if (balance > 0) {
+            return null;
+        }
+
         balance = Math.abs(balance);
         DebtEntity debtEntity =
                 debtDao.getDebtEntityBySenderUserIdAndRecipientUserId(senderUserId, recipientUserId);
         if (debtEntity != null){
             balance = balance + debtEntity.getAmount();
+        } else {
+            debtEntity = new DebtEntity();
         }
-        if (balance < 0) {
-            debtEntity.setSenderUserId(senderUserId);
-            debtEntity.setRecipientUserId(recipientUserId);
-            debtEntity.setAmount(balance);
-            debtEntity = debtDao.save(debtEntity);
-        }
+        debtEntity.setSenderUserId(senderUserId);
+        debtEntity.setRecipientUserId(recipientUserId);
+        debtEntity.setAmount(balance);
+        debtEntity = debtDao.save(debtEntity);
         return debtEntity;
     }
 
-    private void payDebt(Long senderUserId, Long recipientUserId, Long balance){
-        List<DebtEntity> debtEntities = debtDao.getDebtEntityBySenderUserId(senderUserId);
-        if (debtEntities != null && debtEntities.size() > 0) {
-            for (DebtEntity debtEntity : debtEntities) {
-                if (debtEntity.getAmount() > balance){
-                    Long debtAmount = debtEntity.getAmount() - balance;
-                    balance = 0L;
-                    debtEntity.setAmount(debtAmount);
-                    debtDao.save(debtEntity);
-                    break;
-                } else {
-                    balance = balance - debtEntity.getAmount();
-                    debtEntity.setAmount(0L);
-                    debtDao.save(debtEntity);
-                }
+    private Payment payDebt(Long senderUserId){
+        UserEntity userEntity = authDao.getUserEntityById(senderUserId);
+        Long balance = userEntity.getBalance();
+        DebtEntity debtEntity = debtDao.getDebtEntityBySenderUserId(senderUserId);
+        Long paymentAmount = 0L;
+        if (debtEntity != null) {
+            if (debtEntity.getAmount() > balance){
+                paymentAmount = balance;
+                Long debtAmount = debtEntity.getAmount() - balance;
+                balance = 0L;
+                debtEntity.setAmount(debtAmount);
+            } else {
+                paymentAmount = debtEntity.getAmount();;
+                balance = balance - debtEntity.getAmount();
+                debtEntity.setAmount(0L);
             }
+            debtDao.save(debtEntity);
         }
 
-        UserEntity userEntity = getUserEntityById(senderUserId);
+        userEntity = authDao.getUserEntityById(senderUserId);
         updateUserBalance(userEntity, balance);
+
+        if (paymentAmount > 0) {
+            updateTransactionInDb(debtEntity.getSenderUserId(),
+                    debtEntity.getRecipientUserId(),
+                    paymentAmount);
+            return constructPayment(debtEntity.getSenderUserId(),
+                    debtEntity.getRecipientUserId(),
+                    paymentAmount);
+        }
+
+
+        return null;
     }
 
-    private PaymentResponse constructPaymentResponse(Long transactionAmount, Long balance, Long debtAmount){
+    private PaymentResponse constructPaymentResponse(Long transactionAmount, Long balance, Debt debt){
         Calendar calendar = Calendar.getInstance();
         PaymentResponse paymentResponse = new PaymentResponse();
         paymentResponse.setTransaction(transactionAmount);
         paymentResponse.setBalance(balance);
-        paymentResponse.setDebt(debtAmount);
+        paymentResponse.setDebt(debt);
         paymentResponse.setAsOnDate(DateUtil.convertToStandardDateStringFormat(calendar.getTimeInMillis()));
         return  paymentResponse;
     }
 
-    private UserEntity getUserEntityById(Long userId) throws InvalidArgumentException{
-        UserEntity userEntity = authDao.findUserEntityById(userId);
+    private UserEntity getUserEntityByUsername(String username) throws InvalidRecipientException{
+        UserEntity userEntity = authDao.getUserEntitiesByUsername(username);
         if (userEntity == null) {
-            throw new InvalidArgumentException();
+            throw new InvalidRecipientException();
         }
         return userEntity;
     }
 
-    private TransactionEntity updateTransactionInDb(PaymentRequest paymentRequest){
+    private TransactionEntity updateTransactionInDb(Long senderUserId, Long recipientUserId, Long amount){
         TransactionEntity transactionEntity = new TransactionEntity();
-        transactionEntity.setSenderUserId(paymentRequest.getSenderUserId());
-        transactionEntity.setRecipientUserId(paymentRequest.getRecipientUserId());
-        transactionEntity.setAmount(-paymentRequest.getAmount());
+        transactionEntity.setSenderUserId(senderUserId);
+        if (recipientUserId != null) {
+            transactionEntity.setRecipientUserId(recipientUserId);
+        }
+        transactionEntity.setAmount(amount);
         return transactionDao.save(transactionEntity);
     }
 }

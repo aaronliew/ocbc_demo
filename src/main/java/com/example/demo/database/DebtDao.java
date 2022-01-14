@@ -14,7 +14,12 @@ public interface DebtDao extends JpaRepository<DebtEntity, Long> {
     DebtEntity getDebtEntityBySenderUserIdAndRecipientUserId(long senderId, long recipientId);
 
     @Query("select debt from DebtEntity debt " +
-            "where debt.senderUserId = : senderId and debt.amount > 0 " +
+            "where debt.senderUserId = :senderId and debt.amount > 0 " +
             "order by debt.recordCreateDate")
-    List<DebtEntity> getDebtEntityBySenderUserId(@Param("senderId") Long senderId);
+    DebtEntity getDebtEntityBySenderUserId(@Param("senderId") Long senderId);
+
+    @Query("select debt from DebtEntity debt " +
+            "where debt.recipientUserId = :recipientUserId and debt.amount > 0 " +
+            "order by debt.recordCreateDate")
+    DebtEntity getDebtEntityByRecipientUserId(@Param("recipientUserId") Long recipientUserId);
 }

@@ -4,6 +4,7 @@ import com.example.demo.model.auth.LoginRequest;
 import com.example.demo.model.auth.LoginResponse;
 import com.example.demo.model.command.Username;
 import com.example.demo.rest.LoginApi;
+import com.example.demo.util.CommandUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.catalina.User;
 import picocli.CommandLine;
@@ -41,15 +42,16 @@ public class LoginCommand implements Runnable {
             LoginResponse loginResponse = LoginApi.login(BASE_URL, loginRequest);
             writeConfigFile(loginResponse);
             System.out.println("Hello, " + loginResponse.getUsername());
-            if (loginResponse.getDebt() != null && loginResponse.getDebt().getAmount() > 0) {
-                System.out.println("Owing " + loginResponse.getDebt().getAmount() + " to " + loginResponse.getDebt().getRecipientName());
-            } else if (loginResponse.getDebt() != null && loginResponse.getDebt().getAmount() < 0) {
-                System.out.println("Owing " + Math.abs(loginResponse.getDebt().getAmount()) + " from " + loginResponse.getDebt().getRecipientName());
-            }
+            System.out.println("Your balance is " + loginResponse.getBalance());
+            CommandUtil.printDebt(loginResponse.getDebt());
         } catch (Exception e) {
             System.out.println(e);
             throw new CommandLine.ExecutionException(spec.commandLine(), "Unable to write config file");
         }
+    }
+
+    private void printDebt(){
+
     }
 
     private static void writeConfigFile(LoginResponse loginResponse) throws Exception {

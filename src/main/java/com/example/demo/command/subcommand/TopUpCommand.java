@@ -5,6 +5,7 @@ import com.example.demo.model.command.Username;
 import com.example.demo.model.transaction.TopUpRequest;
 import com.example.demo.model.transaction.TopUpResponse;
 import com.example.demo.rest.TransactionApi;
+import com.example.demo.util.CommandUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine;
 
@@ -41,12 +42,7 @@ public class TopUpCommand implements Runnable {
                         " to " + topUpResponse.getPayment().getRecipientName());
             }
             System.out.println("Your balance is " + topUpResponse.getBalance());
-
-            if (topUpResponse.getDebt()!= null && topUpResponse.getDebt().getAmount() > 0) {
-                System.out.println("Owing " + topUpResponse.getDebt().getAmount() + " to " + topUpResponse.getDebt().getRecipientName());
-            } else if (topUpResponse.getDebt()!= null && topUpResponse.getDebt().getAmount() < 0) {
-                System.out.println("Owing " + Math.abs(topUpResponse.getDebt().getAmount()) + " from " + topUpResponse.getDebt().getRecipientName());
-            }
+            CommandUtil.printDebt(topUpResponse.getDebt());
         } catch (Exception e){
             throw new CommandLine.ExecutionException(spec.commandLine(), "Please login before you make payment");
         }

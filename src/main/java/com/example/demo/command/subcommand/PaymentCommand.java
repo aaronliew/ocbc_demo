@@ -8,6 +8,7 @@ import com.example.demo.model.transaction.PaymentRequest;
 import com.example.demo.model.transaction.PaymentResponse;
 import com.example.demo.rest.LoginApi;
 import com.example.demo.rest.TransactionApi;
+import com.example.demo.util.CommandUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine;
 
@@ -49,12 +50,7 @@ public class PaymentCommand implements Runnable {
             paymentRequest.setAmount(amount);
             PaymentResponse paymentResponse = TransactionApi.pay(BASE_URL, paymentRequest);
             System.out.println("Transferred " + amount + " to " + recipientName);
-            System.out.println("Your balance is " + paymentResponse.getBalance());
-            if (paymentResponse.getDebt() != null && paymentResponse.getDebt().getAmount() > 0) {
-                System.out.println("Owing " + paymentResponse.getDebt().getAmount() + " to " + paymentResponse.getDebt().getRecipientName());
-            } else if (paymentResponse.getDebt() != null && paymentResponse.getDebt().getAmount() < 0) {
-                System.out.println("Owing " + Math.abs(paymentResponse.getDebt().getAmount()) + " from " + paymentResponse.getDebt().getSenderName());
-            }
+            CommandUtil.printDebt(paymentResponse.getDebt());
         } catch (ApiException e) {
             System.out.println(e.getErrorResponse().getMessage());
         }

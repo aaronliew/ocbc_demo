@@ -29,6 +29,7 @@ public class AuthController {
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest loginRequest){
         validateLoginRequest(loginRequest);
+        loginRequest.setUsername(loginRequest.getUsername().toLowerCase());
         LoginResponse loginResponse = authService.login(loginRequest);
         Debt debt = transactionService.getDebtSummary(loginResponse.getId());
         loginResponse.setDebt(debt);

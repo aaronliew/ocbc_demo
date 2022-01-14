@@ -31,6 +31,8 @@ public class TransactionController {
     public PaymentResponse makePayment(@RequestBody PaymentRequest paymentRequest){
         try {
             validateMakePaymentRequest(paymentRequest);
+            paymentRequest.setSenderUserName(paymentRequest.getSenderUserName().toLowerCase());
+            paymentRequest.setRecipientUserName(paymentRequest.getRecipientUserName().toLowerCase());
             return transactionService.makePayment(paymentRequest);
         } catch (InvalidRecipientException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid recipient");
@@ -43,6 +45,7 @@ public class TransactionController {
     public TopUpResponse topUp(@RequestBody TopUpRequest topUpRequest){
         try {
             validateTopUpRequest(topUpRequest);
+            topUpRequest.setUsername(topUpRequest.getUsername().toLowerCase());
             return transactionService.topUpPayment(topUpRequest);
         } catch (InvalidArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid argument");

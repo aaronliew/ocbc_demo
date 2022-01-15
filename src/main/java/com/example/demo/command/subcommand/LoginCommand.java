@@ -1,5 +1,6 @@
 package com.example.demo.command.subcommand;
 
+import com.example.demo.exception.ApiException;
 import com.example.demo.model.auth.LoginRequest;
 import com.example.demo.model.auth.LoginResponse;
 import com.example.demo.model.command.Username;
@@ -33,9 +34,6 @@ public class LoginCommand implements Runnable {
 
     @Override
     public void run() {
-        // The business logic of the command goes here...
-        // In this case, code for generation of ASCII art graphics
-        // (omitted for the sake of brevity).
         try {
             LoginRequest loginRequest = new LoginRequest();
             loginRequest.setUsername(username);
@@ -44,14 +42,11 @@ public class LoginCommand implements Runnable {
             System.out.println("Hello, " + loginResponse.getUsername());
             System.out.println("Your balance is " + loginResponse.getBalance());
             CommandUtil.printDebt(loginResponse.getDebt());
+        } catch (ApiException e) {
+            System.out.println(e.getErrorResponse().getMessage());
         } catch (Exception e) {
-            System.out.println(e);
             throw new CommandLine.ExecutionException(spec.commandLine(), "Unable to write config file");
         }
-    }
-
-    private void printDebt(){
-
     }
 
     private static void writeConfigFile(LoginResponse loginResponse) throws Exception {

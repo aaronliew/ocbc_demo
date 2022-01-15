@@ -38,6 +38,8 @@ public class TransactionController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid recipient");
         } catch (InvalidArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid argument");
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Invalid argument");
         }
     }
 
@@ -49,6 +51,8 @@ public class TransactionController {
             return transactionService.topUpPayment(topUpRequest);
         } catch (InvalidArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid argument");
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Invalid argument");
         }
 
     }

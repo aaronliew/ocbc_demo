@@ -39,6 +39,8 @@ public class AuthController {
             return loginResponse;
         } catch (InvalidArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid argument");
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Invalid argument");
         }
     }
 
